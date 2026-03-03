@@ -6,9 +6,12 @@ export default function Canvas() {
     const [isDrawing,setIsDrawing]=useState(false);
     const [color,setColor]=useState('#000000');
 
+    const [history,setHistory]=useState<ImageData[]>([]);
+    const [redoHistory,setRedoHistory]=useState<ImageData[]>([]);
+
     const startDrawing=(e:React.MouseEvent<HTMLCanvasElement>)=>{
         e.preventDefault();
-        if(tool!=="pencil" && tool!=='brush'){
+        if(tool!=="pencil" && tool!=='brush' && tool!== 'eraser'){
             return;
         }
         const canvas=canvasRef.current;
@@ -20,10 +23,14 @@ export default function Canvas() {
             return;
         }
         ctx.strokeStyle=color;
+        ctx.globalCompositeOperation='source-over';
         if(tool=== 'pencil'){
           ctx.lineWidth=2;
         }else if(tool=== 'brush'){
           ctx.lineWidth=15;
+        }else if(tool=== 'eraser'){
+          ctx.globalCompositeOperation="destination-out";
+          ctx.lineWidth=20;
         }
         ctx.lineCap="round";
         ctx.beginPath();
@@ -33,7 +40,7 @@ export default function Canvas() {
 
     const draw=(e:React.MouseEvent<HTMLCanvasElement>)=>{
         e.preventDefault();
-        if(!isDrawing || (tool!=="pencil" && tool!== 'brush'))return;
+        if(!isDrawing || (tool!=="pencil" && tool!== 'brush' && tool!== 'eraser'))return;
         const canvas=canvasRef.current;
         if(!canvas)return;
         const ctx=canvas.getContext('2d');
@@ -46,16 +53,63 @@ export default function Canvas() {
 
     const stopDrawing=()=>{
         setIsDrawing(false);
+        const canvas=canvasRef.current;
+        if(!canvas) return;
+        const ctx=canvas.getContext('2d');
+        if(!ctx) return;
+        const snapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+        setHistory(prev=>[...prev,snapshot]);
     }
+
+const handleUndo=()=>{
+  const canvas=canvasRef.current;
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  if(!ctx)return;
+  if(history.length===0)return;
+  //redo
+  const snapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+  setRedoHistory(prev=>[...prev,snapshot]);
+//redo
+  const newHistory=[...history];
+  newHistory.pop();
+  const previousState=newHistory[newHistory.length-1];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(previousState){
+     ctx.putImageData(previousState,0,0);
+  }
+  setHistory(newHistory);
+}
+
+
+
+const handleRedo=()=>{
+  const canvas=canvasRef.current;
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  if(!ctx) return;
+  const showImage=[...redoHistory];
+  if(showImage.length===0)return;
+  const showImageToCanvas=showImage.pop();
+  if(!showImageToCanvas)return;
+ const currentState=ctx.getImageData(0,0,canvas.width,canvas.height);
+ setHistory(prev=>[...prev,currentState]);
+
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+ ctx.putImageData(showImageToCanvas,0,0);
+
+ setRedoHistory(showImage);
+}
+    
   return (
     <>
     <div className="toolbar">
       <ul className="tool-options">
         <li className="option" onClick={()=>setTool("pencil")}><i className="fa-solid fa-pencil"></i></li>
         <li className="option"><i onClick={()=>setTool('brush')} className="fa-solid fa-paint-brush"></i></li>
-        <li className="option"><i className="fa-solid fa-eraser"></i></li>
-        <li className="option"><i className="fa-solid fa-undo"></i></li>
-        <li className="option"><i className="fa-solid fa-redo"></i></li>
+        <li className="option"><i onClick={()=>setTool('eraser')} className="fa-solid fa-eraser"></i></li>
+        <li className="option"><i onClick={handleUndo} className="fa-solid fa-undo"></i></li>
+        <li className="option"><i onClick={handleRedo} className="fa-solid fa-redo"></i></li>
       </ul>
 
 
@@ -124,7 +178,6 @@ export default function Canvas() {
         onMouseUp={stopDrawing}
         onMouseMove={draw}
         >
-    
     </canvas>
     </>
   );
