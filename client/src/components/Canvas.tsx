@@ -8,7 +8,7 @@ export default function Canvas() {
 
     const startDrawing=(e:React.MouseEvent<HTMLCanvasElement>)=>{
         e.preventDefault();
-        if(tool!=="pencil"){
+        if(tool!=="pencil" && tool!=='brush'){
             return;
         }
         const canvas=canvasRef.current;
@@ -20,10 +20,12 @@ export default function Canvas() {
             return;
         }
         ctx.strokeStyle=color;
-        ctx.lineWidth=2;
+        if(tool=== 'pencil'){
+          ctx.lineWidth=2;
+        }else if(tool=== 'brush'){
+          ctx.lineWidth=15;
+        }
         ctx.lineCap="round";
-
-
         ctx.beginPath();
         ctx.moveTo(e.nativeEvent.offsetX,e.nativeEvent.offsetY);
         setIsDrawing(true);
@@ -31,7 +33,7 @@ export default function Canvas() {
 
     const draw=(e:React.MouseEvent<HTMLCanvasElement>)=>{
         e.preventDefault();
-        if(!isDrawing || tool!="pencil")return;
+        if(!isDrawing || (tool!=="pencil" && tool!== 'brush'))return;
         const canvas=canvasRef.current;
         if(!canvas)return;
         const ctx=canvas.getContext('2d');
@@ -50,7 +52,7 @@ export default function Canvas() {
     <div className="toolbar">
       <ul className="tool-options">
         <li className="option" onClick={()=>setTool("pencil")}><i className="fa-solid fa-pencil"></i></li>
-        <li className="option"><i className="fa-solid fa-paint-brush"></i></li>
+        <li className="option"><i onClick={()=>setTool('brush')} className="fa-solid fa-paint-brush"></i></li>
         <li className="option"><i className="fa-solid fa-eraser"></i></li>
         <li className="option"><i className="fa-solid fa-undo"></i></li>
         <li className="option"><i className="fa-solid fa-redo"></i></li>
